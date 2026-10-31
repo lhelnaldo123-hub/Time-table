@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1e40af">
+<link rel="manifest" href="manifest.json">
+<title>Timetable Maker</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Arial,sans-serif;background:#f1f5f9;color:#0f172a}
+header.app{background:#1e40af;color:#fff;padding:12px 16px;font-weight:700;font-size:18px}
+nav{display:flex;overflow-x:auto;background:#fff;border-bottom:1px solid #cbd5e1;position:sticky;top:0;z-index:5}
+nav button{flex:1;min-width:90px;padding:12px;border:0;background:none;font-weight:600;cursor:pointer;border-bottom:3px solid transparent}
+nav button.on{color:#1e40af;border-color:#1e40af}
+section{display:none;padding:14px;max-width:1000px;margin:auto}
+section.on{display:block}
+.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
+label{display:block;font-size:13px;font-weight:600;margin:8px 0 3px}
+input,select{width:100%;padding:9px;border:1px solid #94a3b8;border-radius:6px;font-size:15px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+button.b{background:#1e40af;color:#fff;border:0;padding:10px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:15px}
+button.d{background:#dc2626;color:#fff;border:0;padding:4px 9px;border-radius:5px;cursor:pointer}
+table.l{width:100%;border-collapse:collapse;font-size:14px}
+table.l td,table.l th{border-bottom:1px solid #e2e8f0;padding:7px;text-align:left}
+.chip{display:inline-flex;gap:6px;align-items:center;background:#e0e7ff;border-radius:20px;padding:4px 6px 4px 12px;margin:3px}
+.chip button{border:0;background:#c7d2fe;border-radius:50%;width:20px;height:20px;cursor:pointer}
+.msg{padding:10px;border-radius:6px;margin:8px 0;background:#fef3c7}
+.wrap{overflow-x:auto}
+/* ---------- TIMETABLE SHEET ---------- */
+.sheet{background:var(--bg);padding:18px;margin-bottom:16px;border:2px solid var(--h);border-radius:var(--r);min-width:700px}
+.sh{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:10px;text-align:center}
+.sh img{height:70px;max-width:110px;object-fit:contain}
+.sh h1{margin:0;font-size:26px;color:var(--h);text-transform:uppercase;letter-spacing:1px}
+.sh h2{margin:2px 0 0;font-size:16px;color:var(--tx)}
+.sheet table{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed}
+.sheet th{background:var(--h);color:var(--hc);padding:8px 3px;font-size:13px;border-radius:var(--r2)}
+.sheet th small{display:block;font-weight:400;font-size:10px}
+.sheet td{text-align:center;padding:8px 3px;font-size:13px;border:1px solid var(--line);border-radius:var(--r2);height:58px;background:var(--cell)}
+.sheet td b{display:block}.sheet td i{font-size:11px;color:#475569}
+.sheet td.day{background:var(--h2);color:var(--hc);font-weight:700;width:70px}
+.sheet td.brk{background:var(--brk);font-weight:700;letter-spacing:3px;writing-mode:vertical-rl;transform:rotate(180deg);color:var(--tx);width:34px}
+.sheet tr:nth-child(even) td:not(.day):not(.brk){filter:brightness(.98)}
+.t1{--bg:#fff;--h:#1e40af;--h2:#1d4ed8;--hc:#fff;--line:#cbd5e1;--cell:#fff;--brk:#dbeafe;--tx:#1e293b;--r:4px;--r2:0}
+.t2{--bg:#f0fdf4;--h:#15803d;--h2:#16a34a;--hc:#fff;--line:#bbf7d0;--cell:#fff;--brk:#bbf7d0;--tx:#14532d;--r:18px;--r2:10px}
+.t3{--bg:#fff7ed;--h:#c2410c;--h2:#ea580c;--hc:#fff;--line:#fed7aa;--cell:#fff;--brk:#fed7aa;--tx:#7c2d12;--r:12px;--r2:8px}
+.t4{--bg:#faf5ff;--h:#7e22ce;--h2:#9333ea;--hc:#fff;--line:#e9d5ff;--cell:#fff;--brk:#e9d5ff;--tx:#581c87;--r:20px;--r2:14px}
+.t5{--bg:#fff;--h:#000;--h2:#222;--hc:#fff;--line:#000;--cell:#fff;--brk:#ddd;--tx:#000;--r:0;--r2:0}
+.sfoot{text-align:center;font-size:11px;margin-top:8px;color:#64748b}
+@media print{
+ body{background:#fff}.ui,header.app,nav{display:none!important}
+ section{display:block!important;padding:0;max-width:none}
+ section:not(#s-view){display:none!important}
+ .card.ui{display:none}.wrap{overflow:visible}
+ .sheet{page-break-after:always;min-width:0;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ @page{size:landscape;margin:10mm}
+}
+</style>
+</head>
+<body>
+<header class="app ui">📅 Timetable Maker</header>
+<nav class="ui" id="nav">
+ <button data-t="setup" class="on">1. School</button>
+ <button data-t="people">2. Teachers & Classes</button>
+ <button data-t="asg">3. Subjects</button>
+ <button data-t="view">4. Timetable</button>
+</nav>
+
+<!-- SETUP -->
+<section id="s-setup" class="on ui">
+ <div class="card">
+  <label>School name</label><input data-k="school" placeholder="e.g. Tender Sprout Comm. School">
+  <label>Term / Year (optional)</label><input data-k="term" placeholder="e.g. First Term 2026/2027">
+  <label>School logo</label><input type="file" id="logo" accept="image/*">
+  <div id="logoPrev"></div>
+ </div>
+ <div class="card">
+  <div class="row">
+   <div><label>School days per week</label><select data-k="days"><option>5</option><option>6</option><option>7</option></select></div>
+   <div><label>Periods per day</label><input type="number" data-k="periods" min="1" max="14"></div>
+  </div>
+  <div class="row">
+   <div><label>Start time</label><input type="time" data-k="start"></div>
+   <div><label>Period length (min)</label><input type="number" data-k="len" min="10"></div>
+  </div>
+  <div class="row">
+   <div><label>Break after period(s) e.g. 3,6</label><input data-k="breaks"></div>
+   <div><label>Break length (min)</label><input type="number" data-k="breakLen"></div>
+  </div>
+ </div>
+</section>
+
+<!-- PEOPLE -->
+<section id="s-people" class="ui">
+ <div class="card"><b>Teachers</b>
+  <div class="row" style="margin-top:8px"><input id="tIn" placeholder="Teacher name"><button class="b" id="tAdd" style="flex:0">Add</button></div>
+  <div id="tList"></div></div>
+ <div class="card"><b>Classes</b>
+  <div class="row" style="margin-top:8px"><input id="cIn" placeholder="e.g. Primary 1, JSS 2A"><button class="b" id="cAdd" style="flex:0">Add</button></div>
+  <div id="cList"></div></div>
+</section>
+
+<!-- ASSIGN -->
+<section id="s-asg" class="ui">
+ <div class="card">
+  <b>Who teaches what, in which classes</b>
+  <div class="row"><div><label>Teacher</label><select id="aT"></select></div>
+  <div><label>Classes (tick every class this teacher teaches this subject)</label>
+  <div id="aC" style="border:1px solid #94a3b8;border-radius:6px;padding:8px;background:#fff"></div>
+  <button class="b" type="button" id="aAll" style="margin-top:6px;padding:5px 10px;font-size:13px">Select all / none</button></div></div>
+  <div class="row"><div><label>Subject</label><input id="aS" list="subs" placeholder="e.g. Mathematics"><datalist id="subs"></datalist></div>
+  <div><label>Periods per week</label><input type="number" id="aN" value="4" min="1" max="20"></div></div>
+  <p><button class="b" id="aAdd">Add</button></p>
+ </div>
+ <div class="card wrap"><table class="l" id="aTab"></table></div>
+</section>
+
+<!-- VIEW -->
+<section id="s-view">
+ <div class="card ui">
+  <button class="b" id="gen">⚙️ Generate Timetable</button>
+  <div id="gmsg"></div>
+  <div class="row" style="margin-top:10px">
+   <div><label>Show</label><select id="vSel"></select></div>
+   <div><label>Design</label><select id="tpl">
+    <option value="t1">Classic Blue</option><option value="t2">Fresh Green</option>
+    <option value="t3">Sunset Orange</option><option value="t4">Royal Purple</option>
+    <option value="t5">Black & White (saves ink)</option></select></div>
+   <div><label>Subject colours</label><select id="col"><option value="1">On</option><option value="0">Off</option></select></div>
+  </div>
+  <p><button class="b" onclick="print()">🖨️ Print / Save as PDF</button></p>
+ </div>
+ <div class="wrap" id="out"></div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S=JSON.parse(localStorage.getItem('ttm')||'null')||{school:'',term:'',logo:'',days:5,periods:8,start:'08:00',len:40,breaks:'3,6',breakLen:20,teachers:[],classes:[],asg:[],tt:null,tpl:'t1',col:'1',view:'allc'};
+const save=()=>{try{localStorage.setItem('ttm',JSON.stringify(S))}catch(e){alert('Storage full – use a smaller logo')}};
+const DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+/* tabs */
+$$('#nav button').forEach(b=>b.onclick=()=>{
+ $$('#nav button').forEach(x=>x.classList.toggle('on',x===b));
+ $$('section').forEach(s=>s.classList.toggle('on',s.id==='s-'+b.dataset.t));
+ refresh();
+});
+
+/* setup bindings */
+$$('[data-k]').forEach(el=>{
+ el.value=S[el.dataset.k];
+ el.oninput=()=>{const k=el.dataset.k;S[k]=el.type==='number'||k==='days'?+el.value:el.value;save()};
+});
+$('#logo').onchange=e=>{
+ const f=e.target.files[0];if(!f)return;
+ const r=new FileReader();r.onload=()=>{
+  const im=new Image();im.onload=()=>{
+   const k=Math.min(1,300/Math.max(im.width,im.height)),c=document.createElement('canvas');
+   c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+   S.logo=c.toDataURL('image/png');save();logoPrev();
+  };im.src=r.result;
+ };r.readAsDataURL(f);
+};
+function logoPrev(){$('#logoPrev').innerHTML=S.logo?`<img src="${S.logo}" height="70"> <button class="d" id="rl">Remove</button>`:'';
+ if(S.logo)$('#rl').onclick=()=>{S.logo='';save();logoPrev()}}
+
+/* teachers & classes */
+function chips(list,id,key){
+ $(id).innerHTML=S[key].map((n,i)=>`<span class="chip">${esc(n)}<button data-i="${i}">×</button></span>`).join('');
+ $$(id+' button').forEach(b=>b.onclick=()=>{
+  const n=S[key][b.dataset.i];S[key].splice(b.dataset.i,1);
+  S.asg=S.asg.filter(a=>key==='teachers'?a.t!==n:a.c!==n);S.tt=null;save();refresh();
+ });
+}
+function addTo(key,inp){const v=$(inp).value.trim();if(!v||S[key].includes(v))return;S[key].push(v);$(inp).value='';save();refresh()}
+$('#tAdd').onclick=()=>addTo('teachers','#tIn');$('#cAdd').onclick=()=>addTo('classes','#cIn');
+$('#tIn').onkeydown=e=>e.key==='Enter'&&addTo('teachers','#tIn');
+$('#cIn').onkeydown=e=>e.key==='Enter'&&addTo('classes','#cIn');
+
+/* assignments */
+$('#aAdd').onclick=()=>{
+ const t=$('#aT').value,s=$('#aS').value.trim(),n=+$('#aN').value;
+ const cs=[...$$('#aC input:checked')].map(x=>x.value);
+ if(!t||!cs.length||!s||!n)return alert('Pick a teacher, tick at least one class, and fill subject and periods.');
+ cs.forEach(c=>{
+  if(!S.asg.some(a=>a.t===t&&a.c===c&&a.s===s))S.asg.push({t,c,s,n});
+ });
+ S.tt=null;$('#aS').value='';save();refresh();
+};
+$('#aAll').onclick=()=>{
+ const b=[...$$('#aC input')],all=b.every(x=>x.checked);
+ b.forEach(x=>x.checked=!all);
+};
+function drawAsg(){
+ const opt=a=>a.map(x=>`<option>${esc(x)}</option>`).join('');
+ $('#aT').innerHTML=opt(S.teachers);
+ $('#aC').innerHTML=S.classes.map(c=>`<label style="display:inline-flex;align-items:center;gap:5px;margin:3px 12px 3px 0;font-weight:500"><input type="checkbox" value="${esc(c)}" style="width:auto"> ${esc(c)}</label>`).join('')||'Add classes first';
+ S.asg.sort((a,b)=>a.t.localeCompare(b.t));
+ $('#subs').innerHTML=opt([...new Set(S.asg.map(a=>a.s))]);
+ $('#aTab').innerHTML='<tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Per wk</th><th></th></tr>'+
+  S.asg.map((a,i)=>`<tr><td>${esc(a.t)}</td><td>${esc(a.c)}</td><td>${esc(a.s)}</td><td>${a.n}</td><td><button class="d" data-i="${i}">×</button></td></tr>`).join('');
+ $$('#aTab button').forEach(b=>b.onclick=()=>{S.asg.splice(b.dataset.i,1);S.tt=null;save();refresh()});
+}
+
+/* generator */
+function generate(){
+ const D=S.days,P=S.periods;let best=null;
+ for(let tr=0;tr<300;tr++){
+  const T={};S.classes.forEach(c=>T[c]=Array.from({length:D},()=>Array(P).fill(null)));
+  const busy={};S.teachers.forEach(t=>busy[t]=Array.from({length:D},()=>Array(P).fill(false)));
+  const tasks=S.asg.map(a=>({...a})).sort((x,y)=>(y.n-x.n)+(Math.random()-.5)*3);
+  let miss=[];
+  for(const a of tasks){
+   const cap=Math.ceil(a.n/D);
+   for(let k=0;k<a.n;k++){
+    let cand=[];
+    for(let d=0;d<D;d++){
+     const same=T[a.c][d].filter(x=>x&&x.s===a.s).length;if(same>=cap)continue;
+     for(let p=0;p<P;p++){
+      if(T[a.c][d][p]||busy[a.t][d][p])continue;
+      const tl=busy[a.t][d].filter(Boolean).length;
+      cand.push({d,p,sc:same*10+tl*.6+Math.random()*3+(p>0&&T[a.c][d][p-1]&&T[a.c][d][p-1].s===a.s?6:0)});
+     }
+    }
+    if(!cand.length){miss.push(`${a.c} – ${a.s} (${a.t})`);continue}
+    cand.sort((x,y)=>x.sc-y.sc);const m=cand[0];
+    T[a.c][m.d][m.p]={s:a.s,t:a.t};busy[a.t][m.d][m.p]=true;
+   }
+  }
+  if(!best||miss.length<best.miss.length)best={T,miss};
+  if(!miss.length)break;
+ }
+ S.tt=best.T;save();return best.miss;
+}
+$('#gen').onclick=()=>{
+ if(!S.asg.length)return $('#gmsg').innerHTML='<div class="msg">Add teachers, classes and subjects first.</div>';
+ const cap=S.days*S.periods,warn=[],tl={},cl={};
+ S.asg.forEach(a=>{tl[a.t]=(tl[a.t]||0)+a.n;cl[a.c]=(cl[a.c]||0)+a.n});
+ for(const t in tl)if(tl[t]>cap)warn.push(`Teacher ${t} has ${tl[t]} periods but the week only has ${cap}`);
+ for(const c in cl)if(cl[c]>cap)warn.push(`Class ${c} has ${cl[c]} periods but the week only has ${cap}`);
+ if(warn.length)return $('#gmsg').innerHTML='<div class="msg">⚠️ Too many periods: '+esc(warn.join('; '))+'. Reduce periods per week or add more periods per day.</div>';
+ const miss=generate();
+ $('#gmsg').innerHTML=miss.length?`<div class="msg">⚠️ Could not fit ${miss.length} period(s): ${esc(miss.slice(0,8).join('; '))}. Reduce periods/week, add more periods per day, or split teachers' load, then generate again.</div>`:'<div class="msg" style="background:#dcfce7">✅ Timetable generated with no clashes!</div>';
+ draw();
+};
+
+/* rendering */
+function slots(){
+ const m=s=>{const[h,mi]=s.split(':').map(Number);return h*60+mi},f=x=>String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');
+ let t=m(S.start||'08:00'),out=[];const br=String(S.breaks).split(',').map(x=>+x.trim());
+ for(let p=0;p<S.periods;p++){
+  out.push({p,l:`P${p+1}`,tm:f(t)+'–'+f(t+S.len)});t+=S.len;
+  if(br.includes(p+1)&&p<S.periods-1){out.push({brk:1,tm:f(t)+'–'+f(t+S.breakLen)});t+=S.breakLen}
+ }return out;
+}
+const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
+function sheet(title,grid,mode){
+ const sl=slots(),colr=S.col==='1'&&S.tpl!=='t5';
+ let h=`<div class="sheet ${S.tpl}"><div class="sh">${S.logo?`<img src="${S.logo}">`:''}<div><h1>${esc(S.school||'Your School Name')}</h1><h2>${esc(title)} Timetable${S.term?' • '+esc(S.term):''}</h2></div>${S.logo?`<img src="${S.logo}" style="visibility:hidden">`:''}</div><table><tr><th></th>`;
+ sl.forEach(x=>h+=x.brk?`<th style="width:34px">☕</th>`:`<th>${x.l}<small>${x.tm}</small></th>`);h+='</tr>';
+ for(let d=0;d<S.days;d++){
+  h+=`<tr><td class="day">${DN[d].slice(0,3)}</td>`;
+  sl.forEach(x=>{
+   if(x.brk){if(d===0)h+=`<td class="brk" rowspan="${S.days}">BREAK</td>`;return}
+   const c=grid[d]&&grid[d][x.p];
+   if(!c)return h+='<td></td>';
+   const bg=colr?`style="background:hsl(${hue(c.s)},75%,90%)"`:'';
+   h+=`<td ${bg}><b>${esc(mode==='t'?c.c:c.s)}</b><i>${esc(mode==='t'?c.s:c.t)}</i></td>`;
+  });h+='</tr>';
+ }
+ return h+`</table><div class="sfoot">Generated with Timetable Maker</div></div>`;
+}
+function teacherGrid(t){
+ const g=Array.from({length:S.days},()=>Array(S.periods).fill(null));
+ for(const c in S.tt)S.tt[c].forEach((r,d)=>r.forEach((x,p)=>{if(x&&x.t===t)g[d][p]={c,s:x.s}}));return g;
+}
+function drawSel(){
+ let o='<option value="allc">All classes</option>'+S.classes.map(c=>`<option value="c:${esc(c)}">Class: ${esc(c)}</option>`).join('');
+ o+='<option value="allt">All teachers</option>'+S.teachers.map(t=>`<option value="t:${esc(t)}">Teacher: ${esc(t)}</option>`).join('');
+ $('#vSel').innerHTML=o;$('#vSel').value=S.view;if($('#vSel').value!==S.view)$('#vSel').value='allc';
+ $('#tpl').value=S.tpl;$('#col').value=S.col;
+}
+function draw(){
+ if(!S.tt||!Object.keys(S.tt).length){$('#out').innerHTML='<div class="card ui">Press <b>Generate Timetable</b>.</div>';return}
+ const v=S.view;let h='';
+ const cls=c=>S.tt[c]?sheet(c,S.tt[c],'c'):'';
+ if(v==='allc')S.classes.forEach(c=>h+=cls(c));
+ else if(v==='allt')S.teachers.forEach(t=>h+=sheet(t,teacherGrid(t),'t'));
+ else if(v.startsWith('c:'))h=cls(v.slice(2));
+ else h=sheet(v.slice(2),teacherGrid(v.slice(2)),'t');
+ $('#out').innerHTML=h;
+}
+$('#vSel').onchange=e=>{S.view=e.target.value;save();draw()};
+$('#tpl').onchange=e=>{S.tpl=e.target.value;save();draw()};
+$('#col').onchange=e=>{S.col=e.target.value;save();draw()};
+
+function refresh(){chips(0,'#tList','teachers');chips(0,'#cList','classes');drawAsg();drawSel();draw();logoPrev()}
+refresh();
+
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
